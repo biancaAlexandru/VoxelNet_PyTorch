@@ -348,14 +348,16 @@ def lidar_box3d_to_camera_box(boxes3d, cal_projection=False, P2=None, T_VELO_2_C
 
         points = np.nan_to_num(points)
         # ignore division by zero => elliminate points which have the z coordinate zero
+        """
         inds = np.where(points[:, 2] != 0)[0]
         if inds.shape[0]:
-            # points = points[inds, :]
+            points = points[inds, :]
             if n == 0:
                 projections[n] = np.zeros((8, 2), dtype=np.float32)
             else:
                 projections[n] = projections[n-1]
             continue
+        """
 
         points[:, 0] /= points[:, 2]
         points[:, 1] /= points[:, 2]
@@ -408,6 +410,7 @@ def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]), col
                                                R_RECT_0=R_RECT_0)
 
     # Draw projections
+    """
     for qs in projections:
         for k in range(0, 4):
             i, j = k, (k + 1) % 4
@@ -435,6 +438,7 @@ def draw_lidar_box3d_on_image(img, boxes3d, scores, gt_boxes3d=np.array([]), col
             i, j = k, k + 4
             cv2.line(img, (int(qs[i, 0]), int(qs[i, 1])), (int(qs[j, 0]),
                                                            int(qs[j, 1])), gt_color, thickness, cv2.LINE_AA)
+    """
 
     return cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
@@ -452,6 +456,7 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array(
     corner_gt_boxes3d = center_to_corner_box3d(gt_boxes3d, coordinate='lidar', T_VELO_2_CAM=T_VELO_2_CAM,
                                                R_RECT_0=R_RECT_0)
     # draw gt
+    """
     for box in corner_gt_boxes3d:
         x0, y0 = lidar_to_bird_view(*box[0, 0:2], factor=factor)
         x1, y1 = lidar_to_bird_view(*box[1, 0:2], factor=factor)
@@ -482,6 +487,7 @@ def draw_lidar_box3d_on_birdview(birdview, boxes3d, scores, gt_boxes3d=np.array(
                  color, thickness, cv2.LINE_AA)
         cv2.line(img, (int(x3), int(y3)), (int(x0), int(y0)),
                  color, thickness, cv2.LINE_AA)
+    """
 
     return cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
