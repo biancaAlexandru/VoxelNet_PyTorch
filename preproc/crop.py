@@ -1,13 +1,16 @@
 import numpy as np
-from scipy.misc import imread
+import cv2
+import os
+# from scipy.misc import imread
 
 import pdb
 
 CAM = 2
 
+
 def load_velodyne_points(filename):
     # Load data points
-    points = np.fromfile(filename, dtype = np.float32).reshape(-1, 4)   # (N, 4); N is around 10k, 4 means [x, y, z, r]
+    points = np.fromfile(filename, dtype=np.float32).reshape(-1, 4)   # (N, 4); N is around 10k, 4 means [x, y, z, r]
 
     return points
 
@@ -39,7 +42,7 @@ def prepare_velo_points(pts3d_raw):
 
     # Reflectance > 0
     indices = pts3d[:, 3] > 0
-    pts3d = pts3d[indices ,:]
+    pts3d = pts3d[indices, :]
     pts3d[:, 3] = 1
 
     return pts3d.transpose(), indices
@@ -60,8 +63,7 @@ def project_velo_points_in_img(pts3d, T_cam_velo, Rrect, Prect):
 
 
 def align_img_and_pc(img_dir, pc_dir, calib_dir):
-    
-    img = imread(img_dir)
+    img = cv2.imread(img_dir)
     pts = load_velodyne_points(pc_dir)
     P, Tr_velo_to_cam, R_cam_to_rect = load_calib(calib_dir)
 
@@ -80,11 +82,12 @@ def align_img_and_pc(img_dir, pc_dir, calib_dir):
 
     points = []
     for i in range(pts2d_normed.shape[1]):
-        c = int(np.round(pts2d_normed[0,i]))
-        r = int(np.round(pts2d_normed[1,i]))
-        if c < cols and r < rows and r > 0 and c > 0:
+        c = int(np.round(pts2d_normed[0, i]))
+        r = int(np.round(pts2d_normed[1, i]))
+        if cols > c > r > 0 and c > 0:
             color = img[r, c, :]
-            point = [pts3d[0, i], pts3d[1, i], pts3d[2, i], reflectances[i], color[0], color[1], color[2], pts2d_normed[0, i], pts2d_normed[1, i]]
+            point = [pts3d[0, i], pts3d[1, i], pts3d[2, i], reflectances[i], color[0], color[1], color[2],
+                     pts2d_normed[0, i], pts2d_normed[1, i]]
             points.append(point)
 
     points = np.array(points)
@@ -95,9 +98,12 @@ def align_img_and_pc(img_dir, pc_dir, calib_dir):
 if __name__ == '__main__':
 
     # Update the following directories
-    IMG_ROOT = './data/KITTI/image/training/image_2/'
-    PC_ROOT = './data/KITTI/point_cloud/training/velodyne/'
-    CALIB_ROOT = './data/KITTI/calib/training/calib/'
+    IMG_ROOT = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/image/training/image_2/'
+    PC_ROOT = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/point_cloud/training/velodyne/'
+
+    print("In main: {0} {1}".format(IMG_ROOT, os.path.exists(IMG_ROOT)))
+    print("In main: {0} {1}".format(PC_ROOT, os.path.exists(PC_ROOT)))
+    CALIB_ROOT = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/calib/training/calib/'
 
     for frame in range(0, 7481):
         img_dir = IMG_ROOT + '%06d.png' % frame
@@ -107,10 +113,5 @@ if __name__ == '__main__':
         points = align_img_and_pc(img_dir, pc_dir, calib_dir)
 
         output_name = PC_ROOT + str(frame) + '.bin'
-        points[:,:4].astype('float32').tofile(output_name)
+        points[:, :4].astype('float32').tofile(output_name)
         print(output_name)
-
-
-
-
-

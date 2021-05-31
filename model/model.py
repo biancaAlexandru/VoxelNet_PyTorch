@@ -17,7 +17,7 @@ small_addon_for_BCE = 1e-6
 
 
 class RPN3D(nn.Module):
-    def __init__(self, cls = 'Car', alpha = 1.5, beta = 1, sigma = 3):
+    def __init__(self, cls='Car', alpha=1.5, beta=1, sigma=3):
         super(RPN3D, self).__init__()
 
         self.cls = cls
@@ -33,7 +33,6 @@ class RPN3D(nn.Module):
 
         self.rpn_output_shape = self.rpn.output_shape
 
-
     def forward(self, data):
         tag = data[0]
         label = data[1]
@@ -46,11 +45,11 @@ class RPN3D(nn.Module):
 
         # Calculate ground-truth
         pos_equal_one, neg_equal_one, targets = cal_rpn_target(
-            label, self.rpn_output_shape, self.anchors, cls = cfg.DETECT_OBJ, coordinate = 'lidar')
+            label, self.rpn_output_shape, self.anchors, cls=cfg.DETECT_OBJ, coordinate='lidar')
         pos_equal_one_for_reg = np.concatenate(
-            [np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis = -1)
-        pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis = (1, 2, 3)).reshape(-1, 1, 1, 1), a_min = 1, a_max = None)
-        neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis = (1, 2, 3)).reshape(-1, 1, 1, 1), a_min = 1, a_max = None)
+            [np.tile(pos_equal_one[..., [0]], 7), np.tile(pos_equal_one[..., [1]], 7)], axis=-1)
+        pos_equal_one_sum = np.clip(np.sum(pos_equal_one, axis=(1, 2, 3)).reshape(-1, 1, 1, 1), a_min=1, a_max=None)
+        neg_equal_one_sum = np.clip(np.sum(neg_equal_one, axis=(1, 2, 3)).reshape(-1, 1, 1, 1), a_min=1, a_max=None)
 
         # Move to gpu
         device = features.device
@@ -82,8 +81,7 @@ class RPN3D(nn.Module):
 
         return prob_output, delta_output, loss, cls_loss, reg_loss, cls_pos_loss_rec, cls_neg_loss_rec
 
-
-    def predict(self, data, probs, deltas, summary = False, vis = False):
+    def predict(self, data, probs, deltas, summary=False, vis=False):
         '''
         probs: (batch, 2, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH)
         deltas: (batch, 14, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH)
@@ -101,14 +99,14 @@ class RPN3D(nn.Module):
 
         batch_gt_boxes3d = None
         if summary or vis:
-            batch_gt_boxes3d = label_to_gt_box3d(label, cls = self.cls, coordinate = 'lidar')
+            batch_gt_boxes3d = label_to_gt_box3d(label, cls=self.cls, coordinate='lidar')
 
         # Move to cpu and convert to numpy array
         probs = probs.cpu().detach().numpy()
         deltas = deltas.cpu().detach().numpy()
 
         # BOTTLENECK
-        batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate = 'lidar')
+        batch_boxes3d = delta_to_boxes3d(deltas, self.anchors, coordinate='lidar')
         batch_boxes2d = batch_boxes3d[:, :, [0, 1, 4, 5, 6]]
         batch_probs = probs.reshape((batch_size, -1))
 
@@ -123,7 +121,7 @@ class RPN3D(nn.Module):
             tmp_scores = batch_probs[batch_id, ind]
 
             # TODO: if possible, use rotate NMS
-            boxes2d = corner_to_standup_box2d(center_to_corner_box2d(tmp_boxes2d, coordinate = 'lidar'))
+            boxes2d = corner_to_standup_box2d(center_to_corner_box2d(tmp_boxes2d, coordinate='lidar'))
 
             # 2D box index after nms
             ind, cnt = nms(torch.from_numpy(boxes2d).to(device), torch.from_numpy(tmp_scores).to(device),
@@ -138,7 +136,7 @@ class RPN3D(nn.Module):
         ret_box3d_score = []
         for boxes3d, scores in zip(ret_box3d, ret_score):
             ret_box3d_score.append(np.concatenate([np.tile(self.cls, len(boxes3d))[:, np.newaxis],
-                                                   boxes3d, scores[:, np.newaxis]], axis = -1))
+                                                   boxes3d, scores[:, np.newaxis]], axis=-1))
 
         if summary:
             # Only summry the first one in a batch
@@ -146,12 +144,12 @@ class RPN3D(nn.Module):
             P, Tr, R = load_calib(os.path.join(cfg.CALIB_DIR, cur_tag + '.txt'))
 
             front_image = draw_lidar_box3d_on_image(img[0], ret_box3d[0], ret_score[0],
-                                                    batch_gt_boxes3d[0], P2 = P, T_VELO_2_CAM = Tr, R_RECT_0 = R)
+                                                    batch_gt_boxes3d[0], P2=P, T_VELO_2_CAM=Tr, R_RECT_0=R)
 
-            bird_view = lidar_to_bird_view_img(lidar[0], factor = cfg.BV_LOG_FACTOR)
+            bird_view = lidar_to_bird_view_img(lidar[0], factor=cfg.BV_LOG_FACTOR)
 
             bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[0], ret_score[0], batch_gt_boxes3d[0],
-                                                     factor = cfg.BV_LOG_FACTOR, P2 = P, T_VELO_2_CAM = Tr, R_RECT_0 = R)
+                                                     factor=cfg.BV_LOG_FACTOR, P2=P, T_VELO_2_CAM=Tr, R_RECT_0=R)
 
             heatmap = colorize(probs[0, ...], cfg.BV_LOG_FACTOR)
 
@@ -170,12 +168,12 @@ class RPN3D(nn.Module):
                 P, Tr, R = load_calib(os.path.join(cfg.CALIB_DIR, cur_tag + '.txt'))
 
                 front_image = draw_lidar_box3d_on_image(img[i], ret_box3d[i], ret_score[i],
-                                                        batch_gt_boxes3d[i], P2 = P, T_VELO_2_CAM = Tr, R_RECT_0 = R)
+                                                        batch_gt_boxes3d[i], P2=P, T_VELO_2_CAM=Tr, R_RECT_0=R)
 
-                bird_view = lidar_to_bird_view_img(lidar[i], factor = cfg.BV_LOG_FACTOR)
+                bird_view = lidar_to_bird_view_img(lidar[i], factor=cfg.BV_LOG_FACTOR)
 
                 bird_view = draw_lidar_box3d_on_birdview(bird_view, ret_box3d[i], ret_score[i], batch_gt_boxes3d[i],
-                                                         factor = cfg.BV_LOG_FACTOR, P2 = P, T_VELO_2_CAM = Tr, R_RECT_0 = R)
+                                                         factor=cfg.BV_LOG_FACTOR, P2=P, T_VELO_2_CAM=Tr, R_RECT_0=R)
 
                 heatmap = colorize(probs[i, ...], cfg.BV_LOG_FACTOR)
 
@@ -188,7 +186,7 @@ class RPN3D(nn.Module):
         return tag, ret_box3d_score
 
 
-def smooth_l1(deltas, targets, sigma = 3.0):
+def smooth_l1(deltas, targets, sigma=3.0):
     # Reference: https://mohitjainweb.files.wordpress.com/2018/03/smoothl1loss.pdf
     sigma2 = sigma * sigma
     diffs = deltas - targets

@@ -15,7 +15,7 @@ cv2.setNumThreads(0)
 import numpy as np
 
 
-def colorize(value, factor = 1, vmin = None, vmax = None):
+def colorize(value, factor=1, vmin=None, vmax=None):
     """
     A utility function for TensorFlow that maps a grayscale image to a matplotlib
     colormap for use with TensorBoard image summaries.
@@ -44,7 +44,7 @@ def colorize(value, factor = 1, vmin = None, vmax = None):
     """
 
     # normalize
-    value = np.sum(value, axis = -1)
+    value = np.sum(value, axis=-1)
     vmin = np.min(value) if vmin is None else vmin
     vmax = np.max(value) if vmax is None else vmax
     value = (value - vmin) / (vmax - vmin)  # vmin..vmax

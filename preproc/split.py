@@ -1,8 +1,6 @@
 import os
 from shutil import copyfile
 
-import pdb
-
 
 def rearrange(original_folders, target_folders, split_file):
     for _, v in original_folders.items():
@@ -26,7 +24,7 @@ def rearrange(original_folders, target_folders, split_file):
             src_label = os.path.join(original_folders['LABEL_ROOT'], file + '.txt')
 
             if (not os.path.exists(src_img)) or (not os.path.exists(src_pc)) or (not os.path.exists(src_label)):
-                 print('No such file: %s' % file)
+                print('No such file: %s' % file)
             else:
                 dst_img = os.path.join(target_folders['IMG_ROOT'], file + '.png')
                 dst_pc = os.path.join(target_folders['PC_ROOT'], file + '.bin')
@@ -40,24 +38,24 @@ def rearrange(original_folders, target_folders, split_file):
 if __name__ == '__main__':
     # Original folder
     original_folders = dict()
-    original_folders['IMG_ROOT'] = './data/KITTI/image/training/image_2/'
-    original_folders['PC_ROOT'] = './data/KITTI/point_cloud/training/velodyne/'
-    original_folders['LABEL_ROOT'] = './data/KITTI/label/training/label_2/'
+    original_folders['IMG_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/image/training/image_2/'
+    original_folders['PC_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/point_cloud/training/velodyne/'
+    original_folders['LABEL_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/label/training/label_2/'
 
     # Modified folder
     train_folders = dict()
-    train_folders['IMG_ROOT'] = './data/MD_KITTI/training/image_2/'
-    train_folders['PC_ROOT'] = './data/MD_KITTI/training/velodyne/'
-    train_folders['LABEL_ROOT'] = './data/MD_KITTI/training/label_2/'
+    train_folders['IMG_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/training/image_2/'
+    train_folders['PC_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/training/velodyne/'
+    train_folders['LABEL_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/training/label_2/'
 
     val_folders = dict()
-    val_folders['IMG_ROOT'] = './data/MD_KITTI/validation/image_2/'
-    val_folders['PC_ROOT'] = './data/MD_KITTI/validation/velodyne/'
-    val_folders['LABEL_ROOT'] = './data/MD_KITTI/validation/label_2/'
+    val_folders['IMG_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/validation/image_2/'
+    val_folders['PC_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/validation/velodyne/'
+    val_folders['LABEL_ROOT'] = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/MD_KITTI/validation/label_2/'
 
     # Split file
-    train_split_file = './data/KITTI/imagesets/ImageSets/train.txt'
-    val_split_file = './data/KITTI/imagesets/ImageSets/val.txt'
+    train_split_file = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/ImageSets/train.txt'
+    val_split_file = 'D:/BiancaAlexandru/VoxelNet_PyTorch/data/KITTI/ImageSets/val.txt'
 
     rearrange(original_folders, train_folders, train_split_file)
     rearrange(original_folders, val_folders, val_split_file)

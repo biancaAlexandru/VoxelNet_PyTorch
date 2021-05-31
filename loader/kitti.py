@@ -24,14 +24,14 @@ class Processor:
         self.data_dir = data_dir
         self.aug = aug
         self.is_testset = is_testset
-
+        print("Processor: data_dir: {0}".format(data_dir))
 
     def __call__(self, load_index):
         if self.aug:
             ret = aug_data(self.data_tag[load_index], self.data_dir)
         else:
             rgb = cv2.resize(cv2.imread(self.f_rgb[load_index]), (cfg.IMAGE_WIDTH, cfg.IMAGE_HEIGHT))
-            raw_lidar = np.fromfile(self.f_lidar[load_index], dtype = np.float32).reshape((-1, 4))
+            raw_lidar = np.fromfile(self.f_lidar[load_index], dtype=np.float32).reshape((-1, 4))
             if not self.is_testset:
                 labels = [line for line in open(self.f_label[load_index], 'r').readlines()]
             else:
@@ -44,7 +44,7 @@ class Processor:
 
 
 class KITTI(data_utl.Dataset):
-    def __init__(self, data_dir, shuffle = False, aug = False, is_testset = False):
+    def __init__(self, data_dir, shuffle=False, aug=False, is_testset=False):
         self.data_dir = data_dir
         self.shuffle = shuffle
         self.aug = aug
@@ -58,7 +58,7 @@ class KITTI(data_utl.Dataset):
         self.f_lidar.sort()
         self.f_label.sort()
 
-        self.data_tag = [name.split('/')[-1].split('.')[-2] for name in self.f_rgb]
+        self.data_tag = [name.split('\\')[-1].split('.')[-2] for name in self.f_rgb]
 
         assert len(self.data_tag) != 0, 'Dataset folder is not correct!'
         assert len(self.data_tag) == len(self.f_rgb) == len(self.f_lidar), 'Dataset folder is not correct!'
@@ -71,13 +71,11 @@ class KITTI(data_utl.Dataset):
         # Build a data processor
         self.proc = Processor(self.data_tag, self.f_rgb, self.f_lidar, self.f_label, self.data_dir, self.aug, self.is_testset)
 
-
     def __getitem__(self, index):
         # A list of [tag, rgb, raw_lidar, voxel, labels]
         ret = self.proc(self.indices[index])
 
         return ret
-
 
     def __len__(self):
         return len(self.indices)
@@ -116,7 +114,7 @@ def build_input(voxel_dict_list):
         feature_list.append(voxel_dict['feature_buffer'])   # (K, T, 7); K is max number of non-empty voxels; T = 35
         number_list.append(voxel_dict['number_buffer'])     # (K,)
         coordinate = voxel_dict['coordinate_buffer']        # (K, 3)
-        coordinate_list.append(np.pad(coordinate, ((0, 0), (1, 0)), mode = 'constant', constant_values = i))
+        coordinate_list.append(np.pad(coordinate, ((0, 0), (1, 0)), mode='constant', constant_values=i))
 
     # feature = np.concatenate(feature_list)
     # number = np.concatenate(number_list)

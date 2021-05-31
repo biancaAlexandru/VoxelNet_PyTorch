@@ -13,22 +13,23 @@ from config import cfg
 
 data_dir = 'velodyne'
 
-def process_pointcloud(point_cloud, cls = cfg.DETECT_OBJ):
+
+def process_pointcloud(point_cloud, cls=cfg.DETECT_OBJ):
     # Input:
     #   (N, 4)
     # Output:
     #   voxel_dict
     if cls == 'Car':
-        scene_size = np.array([4, 80, 70.4], dtype = np.float32)
-        voxel_size = np.array([0.4, 0.2, 0.2], dtype = np.float32)
-        grid_size = np.array([10, 400, 352], dtype = np.int64)
-        lidar_coord = np.array([0, 40, 3], dtype = np.float32)
+        scene_size = np.array([4, 80, 70.4], dtype=np.float32)
+        voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+        grid_size = np.array([10, 400, 352], dtype=np.int64)
+        lidar_coord = np.array([0, 40, 3], dtype=np.float32)
         max_point_number = 35
     else:
-        scene_size = np.array([4, 40, 48], dtype = np.float32)
-        voxel_size = np.array([0.4, 0.2, 0.2], dtype = np.float32)
-        grid_size = np.array([10, 200, 240], dtype = np.int64)
-        lidar_coord = np.array([0, 20, 3], dtype = np.float32)
+        scene_size = np.array([4, 40, 48], dtype=np.float32)
+        voxel_size = np.array([0.4, 0.2, 0.2], dtype=np.float32)
+        grid_size = np.array([10, 200, 240], dtype=np.int64)
+        lidar_coord = np.array([0, 20, 3], dtype=np.float32)
         max_point_number = 45
 
         np.random.shuffle(point_cloud)
@@ -51,16 +52,16 @@ def process_pointcloud(point_cloud, cls = cfg.DETECT_OBJ):
     voxel_index = voxel_index[bound_box]
 
     # [K, 3] coordinate buffer as described in the paper
-    coordinate_buffer = np.unique(voxel_index, axis = 0)
+    coordinate_buffer = np.unique(voxel_index, axis=0)
 
     K = len(coordinate_buffer)
     T = max_point_number
 
     # [K, 1] store number of points in each voxel grid
-    number_buffer = np.zeros(shape = (K), dtype = np.int64)
+    number_buffer = np.zeros(shape=K, dtype=np.int64)
 
     # [K, T, 7] feature buffer as described in the paper
-    feature_buffer = np.zeros(shape = (K, T, 7), dtype = np.float32)
+    feature_buffer = np.zeros(shape=(K, T, 7), dtype=np.float32)
 
     # build a reverse index for coordinate buffer
     index_buffer = {}
@@ -75,11 +76,10 @@ def process_pointcloud(point_cloud, cls = cfg.DETECT_OBJ):
             number_buffer[index] += 1
 
     feature_buffer[:, :, -3:] = feature_buffer[:, :, :3] - \
-        feature_buffer[:, :, :3].sum(axis = 1, keepdims = True)/number_buffer.reshape(K, 1, 1)
+        feature_buffer[:, :, :3].sum(axis=1, keepdims=True)/number_buffer.reshape(K, 1, 1)
 
     voxel_dict = {'feature_buffer': feature_buffer,
                   'coordinate_buffer': coordinate_buffer,
                   'number_buffer': number_buffer}
 
     return voxel_dict
-

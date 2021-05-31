@@ -1,12 +1,11 @@
 import torch
 
-import pdb
-
 # Original author: Francisco Massa:
 # https://github.com/fmassa/object-detection.torch
 # Ported to PyTorch by Max deGroot (02/01/2017)
 
-def nms(boxes, scores, overlap = 0.5, top_k = 200):
+
+def nms(boxes, scores, overlap=0.5, top_k=200):
     """Apply non-maximum suppression at test time to avoid detecting too many
     overlapping bounding boxes for a given object.
     Args:
@@ -47,22 +46,22 @@ def nms(boxes, scores, overlap = 0.5, top_k = 200):
             break
         idx = idx[:-1]  # remove kept element from view
         # load bboxes of next highest vals
-        torch.index_select(x1, 0, idx, out = xx1)
-        torch.index_select(y1, 0, idx, out = yy1)
-        torch.index_select(x2, 0, idx, out = xx2)
-        torch.index_select(y2, 0, idx, out = yy2)
+        torch.index_select(x1, 0, idx, out=xx1)
+        torch.index_select(y1, 0, idx, out=yy1)
+        torch.index_select(x2, 0, idx, out=xx2)
+        torch.index_select(y2, 0, idx, out=yy2)
         # store element-wise max with next highest score
-        xx1 = torch.clamp(xx1, min = x1[i])
-        yy1 = torch.clamp(yy1, min = y1[i])
-        xx2 = torch.clamp(xx2, max = x2[i])
-        yy2 = torch.clamp(yy2, max = y2[i])
+        xx1 = torch.clamp(xx1, min=x1[i])
+        yy1 = torch.clamp(yy1, min=y1[i])
+        xx2 = torch.clamp(xx2, max=x2[i])
+        yy2 = torch.clamp(yy2, max=y2[i])
         w.resize_as_(xx2)
         h.resize_as_(yy2)
         w = xx2 - xx1
         h = yy2 - yy1
         # check sizes of xx1 and xx2.. after each iteration
-        w = torch.clamp(w, min = 0.0)
-        h = torch.clamp(h, min = 0.0)
+        w = torch.clamp(w, min=0.0)
+        h = torch.clamp(h, min=0.0)
         inter = w * h
         # IoU = i / (area(a) + area(b) - i)
         rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)

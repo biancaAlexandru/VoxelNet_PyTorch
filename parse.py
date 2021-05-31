@@ -35,7 +35,6 @@ for i in range(len(tableau20)):
     tableau20[i] = (r / 255., g / 255., b / 255.)
 
 
-
 ROOT_DIR = sys.argv[1]
 
 det_3d = [[] for _ in range(3)]
@@ -50,38 +49,38 @@ for epoch in range(9, 200, 10):
         for line in lines:
             line = line.split()
             if line[0] == 'car_detection_ground':
-                det_bv[0].append( float(line[-3] ))
-                det_bv[1].append( float(line[-2] ))
-                det_bv[2].append( float(line[-1] ))
+                det_bv[0].append(float(line[-3]))
+                det_bv[1].append(float(line[-2]))
+                det_bv[2].append(float(line[-1]))
             elif line[0] == 'car_detection_3d':
-                det_3d[0].append( float(line[-3]))
-                det_3d[1].append( float(line[-2]))
-                det_3d[2].append( float(line[-1]))
+                det_3d[0].append(float(line[-3]))
+                det_3d[1].append(float(line[-2]))
+                det_3d[2].append(float(line[-1]))
 
 RANGE = range(len(det_bv[0]))
 
-plt.figure(figsize = (10, 7))
+plt.figure(figsize=(10, 7))
 
-plt.plot(RANGE, det_3d[0], linestyle = linestyles['solid'], linewidth = 1.5, color = tableau20[0])
-plt.plot(RANGE, det_3d[1], linestyle = linestyles['solid'], linewidth = 1.5, color = tableau20[2])
-plt.plot(RANGE, det_3d[2], linestyle = linestyles['solid'], linewidth = 1.5, color = tableau20[4])
-plt.plot(RANGE, det_bv[0], linestyle = linestyles['densely dotted'], linewidth = 1.5, color = tableau20[0])
-plt.plot(RANGE, det_bv[1], linestyle = linestyles['densely dotted'], linewidth = 1.5, color = tableau20[2])
-plt.plot(RANGE, det_bv[2], linestyle = linestyles['densely dotted'], linewidth = 1.5, color = tableau20[4])
+plt.plot(RANGE, det_3d[0], linestyle=linestyles['solid'], linewidth=1.5, color=tableau20[0])
+plt.plot(RANGE, det_3d[1], linestyle=linestyles['solid'], linewidth=1.5, color=tableau20[2])
+plt.plot(RANGE, det_3d[2], linestyle=linestyles['solid'], linewidth=1.5, color=tableau20[4])
+plt.plot(RANGE, det_bv[0], linestyle=linestyles['densely dotted'], linewidth=1.5, color=tableau20[0])
+plt.plot(RANGE, det_bv[1], linestyle=linestyles['densely dotted'], linewidth=1.5, color=tableau20[2])
+plt.plot(RANGE, det_bv[2], linestyle=linestyles['densely dotted'], linewidth=1.5, color=tableau20[4])
 
 
-plt.legend(['3d easy', '3d moderate', '3d hard', 'bird view easy', 'bird view moderate', 'bird view hard'], loc = 4)
+plt.legend(['3d easy', '3d moderate', '3d hard', 'bird view easy', 'bird view moderate', 'bird view hard'], loc=4)
 
-plt.xlabel('Epoch',  fontsize = 16)
+plt.xlabel('Epoch',  fontsize=16)
 plt.xticks(RANGE, range(9, len(RANGE) * 10, 10))
-plt.xticks(fontsize = 14)
+plt.xticks(fontsize=14)
 
-plt.ylabel('AP', fontsize = 16)
+plt.ylabel('AP', fontsize=16)
 plt.ylim(35, 95)
 plt.yticks(range(35, 95, 5))
-plt.yticks(fontsize = 14)
+plt.yticks(fontsize=14)
 
-plt.grid(linestyle = linestyles['dotted'])
+plt.grid(linestyle=linestyles['dotted'])
 
 DIR_NAME = ROOT_DIR.split('/')[-1]
 
@@ -89,8 +88,3 @@ OUTPUT_NAME = DIR_NAME + '.jpg'
 plt.savefig(OUTPUT_NAME)
 
 print('results parsed and saved in: ' + OUTPUT_NAME)
-
-
-
-
-

@@ -5,6 +5,7 @@ import shutil
 import argparse
 
 import cv2
+
 cv2.setNumThreads(0)
 
 import torch
@@ -23,35 +24,38 @@ from loader.kitti import collate_fn
 
 import pdb
 
+parser = argparse.ArgumentParser(description='training')
 
-parser = argparse.ArgumentParser(description = 'training')
+parser.add_argument('--lr', type=float, default=0.01, help='initial learning rate')
+parser.add_argument('--alpha', type=float, default=1.5, help='alpha in loss function')
+parser.add_argument('--beta', type=float, default=1, help='beta in loss function')
 
-parser.add_argument('--lr', type = float, default = 0.01, help = 'initial learning rate')
-parser.add_argument('--alpha', type = float, default = 1.5, help = 'alpha in loss function')
-parser.add_argument('--beta', type = float, default = 1, help = 'beta in loss function')
+parser.add_argument('--max_epoch', type=int, default=1, help='max epoch')
+parser.add_argument('--batch_size', type=int, default=1, help='batch size')
+parser.add_argument('--workers', type=int, default=4)
 
-parser.add_argument('--max_epoch', type = int, default = 1, help = 'max epoch')
-parser.add_argument('--batch_size', type = int, default = 1, help = 'batch size')
-parser.add_argument('--workers', type = int, default = 4)
+parser.add_argument('--summary_interval', type=int, default=100, help='iter interval for training summary')
+parser.add_argument('--summary_val_interval', type=int, default=200, help='iter interval for val summary')
+parser.add_argument('--val_epoch', type=int, default=10, help='epoch interval for dump val data')
 
-parser.add_argument('--summary_interval', type = int, default = 100, help = 'iter interval for training summary')
-parser.add_argument('--summary_val_interval', type = int, default = 200, help = 'iter interval for val summary')
-parser.add_argument('--val_epoch', type = int, default = 10, help = 'epoch interval for dump val data')
+parser.add_argument('--log_root', type=str, default='log')
+parser.add_argument('--log_name', type=str, default='train.txt')
+parser.add_argument('--tag', type=str, default='default', help='log tag')
 
-parser.add_argument('--log_root', type = str, default = 'log')
-parser.add_argument('--log_name', type = str, default = 'train.txt')
-parser.add_argument('--tag', type = str, default = 'default', help = 'log tag')
+parser.add_argument('--print_freq', default=20, type=int, help='print frequency')
 
-parser.add_argument('--print_freq', default = 20, type = int, help = 'print frequency')
-
-parser.add_argument('--resumed_model', type = str, default = '', help = 'if specified, load the specified model')
-parser.add_argument('--saved_model', type = str, default = 'kitti_{}.pth.tar')
+parser.add_argument('--resumed_model', type=str, default='', help='if specified, load the specified model')
+parser.add_argument('--saved_model', type=str, default='kitti_{}.pth.tar')
 
 # For test data
-parser.add_argument('--output_path', type = str, default = './preds', help = 'results output dir')
-parser.add_argument('--vis', type = bool, default = True, help = 'set to True if dumping visualization')
+parser.add_argument('--output_path', type=str, default='./preds', help='results output dir')
+parser.add_argument('--vis', type=bool, default=True, help='set to True if dumping visualization')
 
 args = parser.parse_args()
+
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
+# os.environ["CUDA_AVAILABLE_DEVICES"] = "1"
 
 
 def run():
@@ -62,13 +66,13 @@ def run():
     min_loss = sys.float_info.max
 
     # Build data loader
-    train_dataset = Dataset(os.path.join(cfg.DATA_DIR, 'training'), shuffle = True, aug = True, is_testset = False)
-    train_dataloader = DataLoader(train_dataset, batch_size = args.batch_size, shuffle = True, collate_fn = collate_fn,
-                                  num_workers = args.workers, pin_memory = False)
+    train_dataset = Dataset(os.path.join(cfg.DATA_DIR, 'training'), shuffle=True, aug=True, is_testset=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn,
+                                  num_workers=args.workers, pin_memory=False)
 
-    val_dataset = Dataset(os.path.join(cfg.DATA_DIR, 'validation'), shuffle = False, aug = False, is_testset = False)
-    val_dataloader = DataLoader(val_dataset, batch_size = args.batch_size, shuffle = False, collate_fn = collate_fn,
-                                num_workers = args.workers, pin_memory = False)
+    val_dataset = Dataset(os.path.join(cfg.DATA_DIR, 'validation'), shuffle=False, aug=False, is_testset=False)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
+                                num_workers=args.workers, pin_memory=False)
     val_dataloader_iter = iter(val_dataloader)
 
     # Build model
@@ -88,10 +92,15 @@ def run():
         else:
             print(("=> No checkpoint found at '{}'".format(args.resumed_model)))
 
+    print("is CUDA available? {0}".format(torch.cuda.is_available()))
+    print("Torch current device: {0}".format(torch.cuda.current_device()))
+    print("Torch device count: {0}".format(torch.cuda.device_count()))
+    print("Using torch {0} {1}".format(torch.__version__, torch.cuda.get_device_properties(0)))
     model = nn.DataParallel(model).cuda()
+    torch.backends.cudnn.benchmark = True
 
     # Optimization scheme
-    optimizer = optim.Adam(model.parameters(), lr = args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     lr_sched = optim.lr_scheduler.MultiStepLR(optimizer, [150])
 
@@ -115,7 +124,7 @@ def run():
 
         for (i, data) in enumerate(train_dataloader):
 
-            model.train(True)   # Training mode
+            model.train(True)  # Training mode
 
             counter += 1
             global_counter += 1
@@ -124,7 +133,7 @@ def run():
 
             # Forward pass for training
             _, _, loss, cls_loss, reg_loss, cls_pos_loss_rec, cls_neg_loss_rec = model(data)
-
+            # summary_writer.add_graph(model(), data[0])
             forward_time = time.time() - start_time
 
             loss.backward()
@@ -141,8 +150,8 @@ def run():
                 # Print training info
                 info = 'Train: {} @ epoch:{}/{} loss: {:.4f} reg_loss: {:.4f} cls_loss: {:.4f} cls_pos_loss: {:.4f} ' \
                        'cls_neg_loss: {:.4f} forward time: {:.4f} batch time: {:.4f}'.format(
-                    counter, epoch + 1, args.max_epoch, loss.item(), reg_loss.item(), cls_loss.item(), cls_pos_loss_rec.item(),
-                    cls_neg_loss_rec.item(), forward_time, batch_time)
+                    counter, epoch + 1, args.max_epoch, loss.item(), reg_loss.item(), cls_loss.item(),
+                    cls_pos_loss_rec.item(), cls_neg_loss_rec.item(), forward_time, batch_time)
                 info = '{}\t'.format(time.asctime(time.localtime())) + info
                 print(info)
 
@@ -153,11 +162,12 @@ def run():
             # Summarize training info
             if counter % args.summary_interval == 0:
                 print("summary_interval now")
-                summary_writer.add_scalars(str(epoch + 1), {'train/loss' : loss.item(),
-                                                            'train/reg_loss' : reg_loss.item(),
-                                                            'train/cls_loss' : cls_loss.item(),
-                                                            'train/cls_pos_loss' : cls_pos_loss_rec.item(),
-                                                            'train/cls_neg_loss' : cls_neg_loss_rec.item()}, global_counter)
+                summary_writer.add_scalars(str(epoch + 1), {'train/loss': loss.item(),
+                                                            'train/reg_loss': reg_loss.item(),
+                                                            'train/cls_loss': cls_loss.item(),
+                                                            'train/cls_pos_loss': cls_pos_loss_rec.item(),
+                                                            'train/cls_neg_loss': cls_neg_loss_rec.item()},
+                                           global_counter)
 
             # Summarize validation info
             if counter % args.summary_val_interval == 0:
@@ -166,20 +176,23 @@ def run():
                 with torch.no_grad():
                     model.train(False)  # Validation mode
 
-                    val_data = next(val_dataloader_iter)    # Sample one batch
+                    val_data = next(val_dataloader_iter)  # Sample one batch
 
                     # Forward pass for validation and prediction
-                    probs, deltas, val_loss, val_cls_loss, val_reg_loss, cls_pos_loss_rec, cls_neg_loss_rec = model(val_data)
+                    probs, deltas, val_loss, val_cls_loss, val_reg_loss, cls_pos_loss_rec, cls_neg_loss_rec = model(
+                        val_data)
 
                     summary_writer.add_scalars(str(epoch + 1), {'validate/loss': loss.item(),
                                                                 'validate/reg_loss': reg_loss.item(),
                                                                 'validate/cls_loss': cls_loss.item(),
                                                                 'validate/cls_pos_loss': cls_pos_loss_rec.item(),
-                                                                'validate/cls_neg_loss': cls_neg_loss_rec.item()}, global_counter)
+                                                                'validate/cls_neg_loss': cls_neg_loss_rec.item()},
+                                               global_counter)
 
                     try:
                         # Prediction
-                        tags, ret_box3d_scores, ret_summary = model.module.predict(val_data, probs, deltas, summary = True)
+                        tags, ret_box3d_scores, ret_summary = model.module.predict(val_data, probs, deltas,
+                                                                                   summary=True)
 
                         for (tag, img) in ret_summary:
                             img = img[0].transpose(2, 0, 1)
@@ -197,18 +210,19 @@ def run():
         avg_val_loss = tot_val_loss / float(tot_val_times)
         is_best = avg_val_loss < min_loss
         min_loss = min(avg_val_loss, min_loss)
-        save_checkpoint({'epoch': epoch + 1, 'global_counter': global_counter, 'state_dict': model.module.state_dict(), 'min_loss': min_loss},
+        save_checkpoint({'epoch': epoch + 1, 'global_counter': global_counter, 'state_dict': model.module.state_dict(),
+                         'min_loss': min_loss},
                         is_best, args.saved_model.format(cfg.DETECT_OBJ))
 
         # Dump test data every 10 epochs
-        if (epoch + 1) % args.val_epoch == 0:   # Time consuming
+        if (epoch + 1) % args.val_epoch == 0:  # Time consuming
             # Create output folder
-            os.makedirs(os.path.join(args.output_path, str(epoch + 1)), exist_ok = True)
-            os.makedirs(os.path.join(args.output_path, str(epoch + 1), 'data'), exist_ok = True)
+            os.makedirs(os.path.join(args.output_path, str(epoch + 1)), exist_ok=True)
+            os.makedirs(os.path.join(args.output_path, str(epoch + 1), 'data'), exist_ok=True)
             os.makedirs(os.path.join(args.output_path, str(epoch + 1), 'log'), exist_ok=True)
 
             if args.vis:
-                os.makedirs(os.path.join(args.output_path, str(epoch + 1), 'vis'), exist_ok = True)
+                os.makedirs(os.path.join(args.output_path, str(epoch + 1), 'vis'), exist_ok=True)
 
             model.train(False)  # Validation mode
 
@@ -216,21 +230,23 @@ def run():
                 for (i, val_data) in enumerate(val_dataloader):
 
                     # Forward pass for validation and prediction
-                    probs, deltas, val_loss, val_cls_loss, val_reg_loss, cls_pos_loss_rec, cls_neg_loss_rec = model(val_data)
+                    probs, deltas, val_loss, val_cls_loss, val_reg_loss, cls_pos_loss_rec, cls_neg_loss_rec = model(
+                        val_data)
 
                     front_images, bird_views, heatmaps = None, None, None
                     if args.vis:
                         tags, ret_box3d_scores, front_images, bird_views, heatmaps = \
-                            model.module.predict(val_data, probs, deltas, summary = False, vis = True)
+                            model.module.predict(val_data, probs, deltas, summary=False, vis=True)
                     else:
-                        tags, ret_box3d_scores = model.module.predict(val_data, probs, deltas, summary = False, vis = False)
+                        tags, ret_box3d_scores = model.module.predict(val_data, probs, deltas, summary=False, vis=False)
 
                     # tags: (N)
                     # ret_box3d_scores: (N, N'); (class, x, y, z, h, w, l, rz, score)
                     for tag, score in zip(tags, ret_box3d_scores):
                         output_path = os.path.join(args.output_path, str(epoch + 1), 'data', tag + '.txt')
                         with open(output_path, 'w+') as f:
-                            labels = box3d_to_label([score[:, 1:8]], [score[:, 0]], [score[:, -1]], coordinate = 'lidar')[0]
+                            labels = box3d_to_label([score[:, 1:8]], [score[:, 0]], [score[:, -1]], coordinate='lidar')[
+                                0]
                             for line in labels:
                                 f.write(line)
                             print('Write out {} objects to {}'.format(len(labels), tag))
@@ -259,7 +275,7 @@ def run():
     summary_writer.close()
 
 
-def save_checkpoint(state, is_best, filename = 'to_be_determined.pth.tar'):
+def save_checkpoint(state, is_best, filename='to_be_determined.pth.tar'):
     torch.save(state, '%s/%s' % (save_model_dir, filename))
     if is_best:
         best_filename = filename.replace('.pth.tar', '_best.pth.tar')
@@ -272,10 +288,7 @@ if __name__ == '__main__':
     val_dir = os.path.join(cfg.DATA_DIR, 'validation')
     log_dir = os.path.join('./log', args.tag)
     save_model_dir = os.path.join('./saved', args.tag)
-    os.makedirs(log_dir, exist_ok = True)
-    os.makedirs(save_model_dir, exist_ok = True)
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(save_model_dir, exist_ok=True)
 
     run()
-
-
-

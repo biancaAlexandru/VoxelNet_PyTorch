@@ -8,7 +8,7 @@ import pdb
 
 
 class ConvMD(nn.Module):
-    def __init__(self, M, cin, cout, k, s, p, bn = True, activation = True):
+    def __init__(self, M, cin, cout, k, s, p, bn=True, activation=True):
         super(ConvMD, self).__init__()
 
         self.M = M  # Dimension of input
@@ -31,7 +31,6 @@ class ConvMD(nn.Module):
         else:
             raise Exception('No such mode!')
 
-
     def forward(self, inputs):
 
         out = self.conv(inputs)
@@ -46,7 +45,7 @@ class ConvMD(nn.Module):
 
 
 class Deconv2D(nn.Module):
-    def __init__(self, cin, cout, k, s, p, bn = True):
+    def __init__(self, cin, cout, k, s, p, bn=True):
         super(Deconv2D, self).__init__()
 
         self.cin = cin
@@ -61,7 +60,6 @@ class Deconv2D(nn.Module):
         if self.bn:
             self.batch_norm = nn.BatchNorm2d(self.cout)
 
-
     def forward(self, inputs):
         out = self.deconv(inputs)
 
@@ -72,13 +70,12 @@ class Deconv2D(nn.Module):
 
 
 class MiddleAndRPN(nn.Module):
-    def __init__(self, alpha = 1.5, beta = 1, sigma = 3, training = True, name = ''):
+    def __init__(self, alpha=1.5, beta=1, sigma=3, training=True, name=''):
         super(MiddleAndRPN, self).__init__()
 
         self.middle_layer = nn.Sequential(ConvMD(3, 128, 64, 3, (2, 1, 1,), (1, 1, 1)),
                                           ConvMD(3, 64, 64, 3, (1, 1, 1), (0, 1, 1)),
                                           ConvMD(3, 64, 64, 3, (2, 1, 1), (1, 1, 1)))
-
 
         if cfg.DETECT_OBJ == 'Car':
             self.block1 = nn.Sequential(ConvMD(2, 128, 128, 3, (2, 2), (1, 1)),
@@ -113,12 +110,11 @@ class MiddleAndRPN(nn.Module):
 
         self.deconv3 = Deconv2D(256, 256, 4, (4, 4), (0, 0))
 
-        self.prob_conv = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), bn = False, activation = False)
+        self.prob_conv = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), bn=False, activation=False)
 
-        self.reg_conv = ConvMD(2, 768, 14, 1, (1, 1), (0, 0), bn = False, activation = False)
+        self.reg_conv = ConvMD(2, 768, 14, 1, (1, 1), (0, 0), bn=False, activation=False)
 
         self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
-
 
     def forward(self, inputs):
 
@@ -138,7 +134,7 @@ class MiddleAndRPN(nn.Module):
         temp_conv = self.block3(temp_conv)      # [batch, 256, 50, 44]
         temp_deconv3 = self.deconv3(temp_conv)
 
-        temp_conv = torch.cat([temp_deconv3, temp_deconv2, temp_deconv1], dim = 1)
+        temp_conv = torch.cat([temp_deconv3, temp_deconv2, temp_deconv1], dim=1)
 
         # Probability score map, [batch, 2, 200/100, 176/120]
         p_map = self.prob_conv(temp_conv)
